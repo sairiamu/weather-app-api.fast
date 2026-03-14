@@ -134,6 +134,25 @@ This repo is ready for a 12-factor style deployment. A basic `Procfile` is inclu
 web: uvicorn app:app --host=0.0.0.0 --port=${PORT:-8989}
 ```
 
+### 🚀 Vercel Deployment
+
+This project is configured for deployment on Vercel. The `vercel.json` file is included and points to `app.py` as the main entry point.
+
+**Required Environment Variables** (set in Vercel dashboard):
+
+- `WEATHER_API_KEY`: Your OpenWeatherMap API key
+- `ADMIN_USERNAME`: Admin username for /admin endpoint (optional, defaults to "admin")
+- `ADMIN_PASSWORD`: Admin password for /admin endpoint (optional, defaults to "securepassword123")
+
+**Deploy Steps**:
+
+1. Push this code to GitHub
+2. Connect your GitHub repo to Vercel
+3. Set the environment variables in Vercel
+4. Deploy!
+
+The API will be available at your Vercel domain (e.g., `https://your-app.vercel.app`).
+
 ## �📝 Notes
 
 - This project is meant as a simple, extendable foundation for building weather-related services.
