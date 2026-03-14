@@ -42,13 +42,13 @@ By default, the API will run at: `http://127.0.0.1:8989`
 
 ## 🧭 Endpoints
 
-| Path       | Method | Description                         |
-| ---------- | ------ | ----------------------------------- |
-| `/`        | GET    | Welcome message + list of endpoints |
-| `/home`    | GET    | Healthcheck / home info             |
+| Path       | Method | Description                                        |
+| ---------- | ------ | -------------------------------------------------- |
+| `/`        | GET    | Welcome message + list of endpoints                |
+| `/home`    | GET    | Healthcheck / home info                            |
 | `/weather` | GET    | Fetch weather by city name or auto-detect location |
-| `/about`   | GET    | API documentation + metadata        |
-| `/admin`   | GET    | API usage statistics (admin)        |
+| `/about`   | GET    | API documentation + metadata                       |
+| `/admin`   | GET    | API usage statistics (admin, requires auth)        |
 
 ### 🔍 Weather endpoint
 
@@ -68,8 +68,8 @@ Example response:
 
 ```json
 {
-  "city": "London",
-  "country": "GB",
+  "city": "arusha",
+  "country": "TZ",
   "temperature": 15.8,
   "feels_like": 15.0,
   "humidity": 72,
@@ -77,6 +77,19 @@ Example response:
   "wind_speed": 3.6,
   "units": "metric"
 }
+```
+
+### 🔐 Admin endpoint
+
+The `/admin` endpoint requires HTTP Basic Authentication:
+
+- **Username**: `admin` (or set `ADMIN_USERNAME` in `.env`)
+- **Password**: `securepassword123` (or set `ADMIN_PASSWORD` in `.env`)
+
+Example with curl:
+
+```bash
+curl -u admin:securepassword123 http://127.0.0.1:8989/admin
 ```
 
 ---

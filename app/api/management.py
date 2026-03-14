@@ -6,81 +6,81 @@ This module provides functionality to track API usage, including:
 - Location data for users
 - Basic statistics
 
-Data is stored in-memory for simplicity; in production, use a database.
+Data is stored in a SQLite database using SQLAlchemy.
 """
 
-import json
 import os
-from collections import defaultdict
-from pathlib import Path
-from typing import Dict, List, Any
+from datetime import datetime
+from typing import Dict, Any
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, func
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-# In-memory storage for stats (use a database in production)
-stats: Dict[str, Any] = {
-    "total_requests": 0,
-    "endpoints": defaultdict(int),
-    "unique_ips": set(),
-    "locations": defaultdict(int),  # city -> count
-    "recent_requests": [],  # list of recent request logs
-}
+Base = declarative_base()
+engine = create_engine("sqlite:///api_stats.db", echo=False)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-STATS_FILE = Path(__file__).parent.parent.parent / "api_stats.json"
+class RequestLog(Base):
+    __tablename__ = "request_logs"
 
+    id = Column(Integer, primary_key=True, index=True)
+    endpoint = Column(String, index=True)
+    ip = Column(String, index=True)
+    city = Column(String, nullable=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
 
-def load_stats():
-    """Load stats from file if it exists."""
-    if STATS_FILE.exists():
-        with open(STATS_FILE, "r") as f:
-            data = json.load(f)
-            stats.update(data)
-            stats["unique_ips"] = set(stats.get("unique_ips", []))
-            stats["endpoints"] = defaultdict(int, stats.get("endpoints", {}))
-            stats["locations"] = defaultdict(int, stats.get("locations", {}))
-
-
-def save_stats():
-    """Save stats to file."""
-    data = stats.copy()
-    data["unique_ips"] = list(stats["unique_ips"])
-    data["endpoints"] = dict(stats["endpoints"])
-    data["locations"] = dict(stats["locations"])
-    with open(STATS_FILE, "w") as f:
-        json.dump(data, f, indent=2)
-
+Base.metadata.create_all(bind=engine)
 
 def track_request(endpoint: str, ip: str, location: Dict[str, Any] = None):
-    """Track a request for statistics."""
-    stats["total_requests"] += 1
-    stats["endpoints"][endpoint] += 1
-    stats["unique_ips"].add(ip)
-
-    if location:
-        city = location.get("city", "Unknown")
-        stats["locations"][city] += 1
-
-    # Keep only last 100 recent requests
-    stats["recent_requests"].append({
-        "endpoint": endpoint,
-        "ip": ip,
-        "city": location.get("city") if location else None,
-        "timestamp": None,  # Could add datetime if needed
-    })
-    if len(stats["recent_requests"]) > 100:
-        stats["recent_requests"].pop(0)
-
-    save_stats()
-
+    """Track a request in the database."""
+    db = SessionLocal()
+    try:
+        log = RequestLog(
+            endpoint=endpoint,
+            ip=ip,
+            city=location.get("city") if location else None
+        )
+        db.add(log)
+        db.commit()
+    finally:
+        db.close()
 
 def get_stats() -> Dict[str, Any]:
-    """Return current statistics."""
-    return {
-        "total_requests": stats["total_requests"],
-        "unique_users": len(stats["unique_ips"]),
-        "endpoints": dict(stats["endpoints"]),
-        "top_locations": sorted(stats["locations"].items(), key=lambda x: x[1], reverse=True)[:10],
-        "recent_requests": stats["recent_requests"][-10:],  # Last 10
-    }
+    """Return current statistics from the database."""
+    db = SessionLocal()
+    try:
+        # Total requests
+        total_requests = db.query(RequestLog).count()
 
+        # Unique users
+        unique_users = db.query(RequestLog.ip).distinct().count()
 
-# Load stats on import
-load_stats()
+        # Endpoint counts
+        from sqlalchemy import func
+        endpoint_counts = db.query(RequestLog.endpoint, func.count(RequestLog.id)).group_by(RequestLog.endpoint).all()
+        endpoints = {ep: count for ep, count in endpoint_counts}
+
+        # Top locations
+        location_counts = db.query(RequestLog.city, func.count(RequestLog.id)).filter(RequestLog.city.isnot(None)).group_by(RequestLog.city).all()
+        top_locations = sorted(location_counts, key=lambda x: x[1], reverse=True)[:10]
+
+        # Recent requests
+        recent = db.query(RequestLog).order_by(RequestLog.timestamp.desc()).limit(10).all()
+        recent_requests = [
+            {
+                "endpoint": r.endpoint,
+                "ip": r.ip,
+                "city": r.city,
+                "timestamp": r.timestamp.isoformat()
+            } for r in recent
+        ]
+
+        return {
+            "total_requests": total_requests,
+            "unique_users": unique_users,
+            "endpoints": endpoints,
+            "top_locations": top_locations,
+            "recent_requests": recent_requests,
+        }
+    finally:
+        db.close()

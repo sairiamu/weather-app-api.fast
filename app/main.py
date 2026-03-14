@@ -1,21 +1,29 @@
 import os
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import uvicorn
 from dotenv import load_dotenv
+import secrets
 
-from api.core.info import information
-from api.home import home
-from api.services.fetch_data import (
+from app.api.core.info import information
+from app.api.home import home
+from app.api.services.fetch_data import (
     get_location_from_ip,
     get_weather,
     get_weather_by_coords,
     WeatherRequest,
 )
-from api.management import track_request, get_stats
+from app.api.management import track_request, get_stats
 
 load_dotenv()
 API_KEY = os.getenv("WEATHER_API_KEY")
+
+# Admin credentials (in production, use environment variables)
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "password")
+
+security = HTTPBasic()
 
 app = FastAPI(
     title="Weather API",
@@ -79,9 +87,17 @@ def get_information(request: Request):
 
 
 @app.get("/admin")
-def admin_stats(request: Request):
-    """Admin endpoint to view API usage statistics."""
-    client_ip = request.headers.get("X-Forwarded-For", request.client.host).split(",")[0].strip()
+def admin_stats(credentials: HTTPBasicCredentials = Depends(security)):
+    """Admin endpoint to view API usage statistics (requires authentication)."""
+    if not (secrets.compare_digest(credentials.username, ADMIN_USERNAME) and
+            secrets.compare_digest(credentials.password, ADMIN_PASSWORD)):
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
+    client_ip = "admin"  # Don't track admin requests as user requests
     track_request("/admin", client_ip)
     return get_stats()
 
