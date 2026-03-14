@@ -46,8 +46,9 @@ By default, the API will run at: `http://127.0.0.1:8989`
 | ---------- | ------ | ----------------------------------- |
 | `/`        | GET    | Welcome message + list of endpoints |
 | `/home`    | GET    | Healthcheck / home info             |
-| `/weather` | GET    | Fetch weather by city name          |
+| `/weather` | GET    | Fetch weather by city name or auto-detect location |
 | `/about`   | GET    | API documentation + metadata        |
+| `/admin`   | GET    | API usage statistics (admin)        |
 
 ### 🔍 Weather endpoint
 
