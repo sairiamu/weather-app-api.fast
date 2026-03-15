@@ -1,5 +1,17 @@
 import os
 
+import sys
+
+# Add the project root to Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Now absolute imports will work
+from weather_api.api.core.info import information
+# ... rest of imports
+
+
+
+
 from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import uvicorn
