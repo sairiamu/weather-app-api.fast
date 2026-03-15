@@ -6,15 +6,15 @@ import uvicorn
 from dotenv import load_dotenv
 import secrets
 
-from app.api.core.info import information
-from app.api.home import home
-from app.api.services.fetch_data import (
+from weather_api.api.core.info import information #weather_api.api.core.info import information
+from weather_api.api.home import home
+from weather_api.api.services.fetch_data import (
     get_location_from_ip,
     get_weather,
     get_weather_by_coords,
     WeatherRequest,
 )
-from app.api.management import track_request, get_stats
+from weather_api.api.management import track_request, get_stats
 
 load_dotenv()
 API_KEY = os.getenv("WEATHER_API_KEY")
@@ -103,4 +103,4 @@ def admin_stats(credentials: HTTPBasicCredentials = Depends(security)):
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app",host="127.0.0.1",port=8989,reload=True)
+    uvicorn.run("weather_api.main:app",host="127.0.0.1",port=8989,reload=True)
